@@ -47,7 +47,7 @@ export const CreateWorkspace = () => {
       console.log('Created workspace:', response);
       if (response && response.id) {
         workspaceService.setCurrentWorkspace(response);
-        navigate(`/workspaces/${response.id}/members`);
+        navigate(`/workspaces/${response.id}`);
       } else {
         throw new Error('ID du workspace non reçu');
       }
