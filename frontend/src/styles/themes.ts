@@ -1,0 +1,167 @@
+export const themes = {
+  light: {
+    colors: {
+      primary: '#026AA7',
+      secondary: '#5AAC44',
+      background: '#FFFFFF',
+      card: '#FFFFFF',
+      text: '#172B4D',
+      textSecondary: '#5A6A85',
+      border: '#E4E4E4',
+      hover: '#F4F5F7',
+      input: '#FFFFFF',
+    },
+    shadows: {
+      navbar: '0 2px 4px rgba(0,0,0,0.1)',
+      card: '0 1px 3px rgba(0,0,0,0.1)',
+      modal: '0 4px 8px rgba(0,0,0,0.1)',
+    },
+    spacing: {
+      xs: '4px',
+      sm: '8px',
+      md: '16px',
+      lg: '24px',
+      xl: '32px',
+    },
+    borderRadius: {
+      sm: '4px',
+      md: '8px',
+      lg: '12px',
+    },
+    transitions: {
+      default: 'all 0.2s ease-in-out',
+    },
+  },
+  dark: {
+    colors: {
+      primary: '#61DAFA',
+      secondary: '#4CAF50',
+      background: '#1A1A1A',
+      card: '#2D2D2D',
+      text: '#FFFFFF',
+      textSecondary: '#B3B3B3',
+      border: '#404040',
+      hover: '#3D3D3D',
+      input: '#2D2D2D',
+    },
+    shadows: {
+      navbar: '0 2px 4px rgba(0,0,0,0.2)',
+      card: '0 1px 3px rgba(0,0,0,0.2)',
+      modal: '0 4px 8px rgba(0,0,0,0.2)',
+    },
+    spacing: {
+      xs: '4px',
+      sm: '8px',
+      md: '16px',
+      lg: '24px',
+      xl: '32px',
+    },
+    borderRadius: {
+      sm: '4px',
+      md: '8px',
+      lg: '12px',
+    },
+    transitions: {
+      default: 'all 0.2s ease-in-out',
+    },
+  },
+  blue: {
+    colors: {
+      primary: '#1E88E5',
+      secondary: '#64B5F6',
+      background: '#E3F2FD',
+      card: '#FFFFFF',
+      text: '#1565C0',
+      textSecondary: '#42A5F5',
+      border: '#BBDEFB',
+      hover: '#BBDEFB',
+      input: '#FFFFFF',
+    },
+    shadows: {
+      navbar: '0 2px 4px rgba(30,136,229,0.1)',
+      card: '0 1px 3px rgba(30,136,229,0.1)',
+      modal: '0 4px 8px rgba(30,136,229,0.1)',
+    },
+    spacing: {
+      xs: '4px',
+      sm: '8px',
+      md: '16px',
+      lg: '24px',
+      xl: '32px',
+    },
+    borderRadius: {
+      sm: '4px',
+      md: '8px',
+      lg: '12px',
+    },
+    transitions: {
+      default: 'all 0.2s ease-in-out',
+    },
+  },
+  green: {
+    colors: {
+      primary: '#2E7D32',
+      secondary: '#4CAF50',
+      background: '#E8F5E9',
+      card: '#FFFFFF',
+      text: '#1B5E20',
+      textSecondary: '#388E3C',
+      border: '#C8E6C9',
+      hover: '#C8E6C9',
+      input: '#FFFFFF',
+    },
+    shadows: {
+      navbar: '0 2px 4px rgba(46,125,50,0.1)',
+      card: '0 1px 3px rgba(46,125,50,0.1)',
+      modal: '0 4px 8px rgba(46,125,50,0.1)',
+    },
+    spacing: {
+      xs: '4px',
+      sm: '8px',
+      md: '16px',
+      lg: '24px',
+      xl: '32px',
+    },
+    borderRadius: {
+      sm: '4px',
+      md: '8px',
+      lg: '12px',
+    },
+    transitions: {
+      default: 'all 0.2s ease-in-out',
+    },
+  },
+  nightPurple: {
+    colors: {
+      primary: '#9C27B0',
+      secondary: '#673AB7',
+      background: '#1A1B26',
+      card: '#24283B',
+      text: '#C0CAF5',
+      textSecondary: '#A9B1D6',
+      border: '#414868',
+      hover: '#414868',
+      input: '#24283B',
+    },
+    shadows: {
+      navbar: '0 2px 4px rgba(156,39,176,0.2)',
+      card: '0 1px 3px rgba(156,39,176,0.2)',
+      modal: '0 4px 8px rgba(156,39,176,0.2)',
+    },
+    spacing: {
+      xs: '4px',
+      sm: '8px',
+      md: '16px',
+      lg: '24px',
+      xl: '32px',
+    },
+    borderRadius: {
+      sm: '4px',
+      md: '8px',
+      lg: '12px',
+    },
+    transitions: {
+      default: 'all 0.2s ease-in-out',
+    },
+  },
+};
