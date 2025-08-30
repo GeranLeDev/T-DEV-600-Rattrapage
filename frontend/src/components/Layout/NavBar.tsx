@@ -87,41 +87,74 @@ const Navbar: React.FC = () => {
   const [recentWorkspaces, setRecentWorkspaces] = useState<Workspace[]>([]);
   const [loadingRecents, setLoadingRecents] = useState(false);
 
+  // Init : charge le workspace courant + les 3 derniers visités (stockage local)
   useEffect(() => {
-    const fetchData = async () => {
+    let mounted = true;
+
+    (async () => {
       try {
-        const workspace = workspaceService.getCurrentWorkspace();
-        const recents = await workspaceService.getRecentWorkspaces();
-        setCurrentWorkspace(workspace);
+        setLoadingRecents(true);
+        const current = workspaceService.getCurrentWorkspace();
+        const recents = await workspaceService.getRecentVisitedWorkspaces();
+        if (!mounted) return;
+        setCurrentWorkspace(current);
         setRecentWorkspaces(recents);
       } catch (error) {
-        console.error('Erreur lors de la récupération des données:', error);
+        console.error('Erreur lors du chargement des récents:', error);
+      } finally {
+        if (mounted) setLoadingRecents(false);
       }
+    })();
+
+    return () => {
+      mounted = false;
     };
-    fetchData();
   }, []);
 
+  // Rester à jour : si la liste des récents change (autre onglet) ou quand on revient sur l’onglet
   useEffect(() => {
-    const fetchRecentWorkspaces = async () => {
-      setLoadingRecents(true);
+    const refreshRecents = async () => {
       try {
-        const recents = await workspaceService.getRecentWorkspaces();
+        setLoadingRecents(true);
+        const recents = await workspaceService.getRecentVisitedWorkspaces();
         setRecentWorkspaces(recents);
       } catch (error) {
-        console.error('Erreur lors de la récupération des workspaces récents:', error);
+        console.error('Erreur lors de la récupération des récents:', error);
       } finally {
         setLoadingRecents(false);
       }
     };
-    fetchRecentWorkspaces();
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'trellolike.recentWorkspaces') refreshRecents();
+    };
+    const onFocus = () => refreshRecents();
+
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
+
 
   const handleRecentClick = (event: React.MouseEvent<HTMLElement>) => {
     setRecentAnchorEl(event.currentTarget);
+    setLoadingRecents(true);
+    workspaceService
+      .getRecentVisitedWorkspaces()
+      .then(setRecentWorkspaces)
+      .finally(() => setLoadingRecents(false));
   };
 
   const handleWorkspacesClick = (event: React.MouseEvent<HTMLElement>) => {
     setWorkspacesAnchorEl(event.currentTarget);
+    setLoadingRecents(true);
+    workspaceService
+      .getRecentVisitedWorkspaces()
+      .then(setRecentWorkspaces)
+      .finally(() => setLoadingRecents(false));
   };
 
   const handleClose = () => {

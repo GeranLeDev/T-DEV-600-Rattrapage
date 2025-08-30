@@ -41,6 +41,32 @@ const slugify = (s: string) =>
     .replace(/^-+|-+$/g, '')
     .slice(0, 64);
 
+const RECENTS_STORAGE_KEY = 'trellolike.recentWorkspaces';
+
+type RecentLite = {
+  id: string;
+  name?: string;
+  displayName?: string;
+  description?: string;
+  updatedAt?: string;
+};
+
+const loadRecents = (): RecentLite[] => {
+  try {
+    const raw = localStorage.getItem(RECENTS_STORAGE_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveRecents = (items: RecentLite[]) => {
+  try {
+    localStorage.setItem(RECENTS_STORAGE_KEY, JSON.stringify(items.slice(0, 3)));
+  } catch { }
+};
+
 export const workspaceService = {
   isWorkspaceFavorite: (workspaceId: string): boolean => {
     return getFavoriteIds().includes(workspaceId);
@@ -78,20 +104,55 @@ export const workspaceService = {
     const withFav = withFavorite(workspace);
     currentWorkspace = withFav;
 
-    // Ajouter aux récents si pas déjà présent
-    if (!recentWorkspaces.find((w) => w.id === withFav.id)) {
+    // — MàJ mémoire "récents" (en RAM)
+    const already = recentWorkspaces.find((w) => w.id === withFav.id);
+    if (!already) {
       recentWorkspaces.unshift(withFav);
       recentWorkspaces = recentWorkspaces.slice(0, 3);
     } else {
-      // garder les favoris à jour si déjà présent
-      recentWorkspaces = recentWorkspaces.map((w) => (w.id === withFav.id ? withFav : w));
+      recentWorkspaces = [
+        withFav,
+        ...recentWorkspaces.filter((w) => w.id !== withFav.id),
+      ].slice(0, 3);
     }
+
+    // — Persistance locale (3 derniers visités)
+    const lite: RecentLite = {
+      id: withFav.id,
+      name: withFav.name,
+      displayName: withFav.displayName,
+      description: withFav.description,
+      updatedAt: withFav.updatedAt,
+    };
+    const stored = loadRecents().filter((r) => r.id !== lite.id);
+    stored.unshift(lite);
+    saveRecents(stored);
   },
 
   getCurrentWorkspace: (): Workspace | null => {
     return currentWorkspace ? withFavorite(currentWorkspace) : null;
   },
 
+  getRecentVisitedWorkspaces: (): Promise<Workspace[]> => {
+    const favs = new Set(getFavoriteIds());
+  
+    const items = loadRecents().map<Workspace>((r) => ({
+      id: r.id,
+      name: r.name ?? '',
+      displayName: r.displayName ?? r.name ?? '',
+      description: r.description ?? '',
+      // on force bien le type attendu
+      members: [] as Member[],
+      isFavorite: favs.has(r.id),
+      // on garantit des strings
+      createdAt: r.updatedAt ?? new Date().toISOString(),
+      updatedAt: r.updatedAt ?? new Date().toISOString(),
+    }));
+  
+    return Promise.resolve(items);
+  },
+  
+  
   getRecentWorkspaces: async (): Promise<Workspace[]> => {
     try {
       const response = await api.get('/members/me/organizations', {

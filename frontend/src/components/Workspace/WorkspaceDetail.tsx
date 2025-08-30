@@ -103,7 +103,8 @@ export const WorkspaceDetail = () => {
           createdAt: response.data.createdAt,
           updatedAt: response.data.dateLastActivity,
         };
-
+        
+        workspaceService.setCurrentWorkspace(workspaceData);
         const membersResponse = await api.get(`/organizations/${workspaceId}/members`);
         const membersData: Member[] = membersResponse.data.map((member: any) => ({
           id: member.id,
