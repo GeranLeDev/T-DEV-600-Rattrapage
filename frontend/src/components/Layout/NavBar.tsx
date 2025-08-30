@@ -284,9 +284,11 @@ const Navbar: React.FC = () => {
 
         <Box sx={{ display: 'flex', gap: 1 }}>
           <ThemeSelector />
-          <IconButton color="inherit">
-          </IconButton>
-          <IconButton color="inherit">
+          <IconButton
+            color="inherit"
+            aria-label="Compte"
+            onClick={() => navigate('/compte')}
+          >
             <PersonIcon />
           </IconButton>
         </Box>
