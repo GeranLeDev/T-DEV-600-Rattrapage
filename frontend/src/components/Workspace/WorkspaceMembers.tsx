@@ -91,7 +91,7 @@ export const WorkspaceMembers = () => {
       await workspaceService.removeMember(workspaceId, memberId);
       setMembers(members.filter((member) => member.id !== memberId));
     } catch (err) {
-      setError('Erreur lors de la suppression du membre');
+      setError("Vous ne pouvez pas vous retirer de cet espace de travail car vous en êtes l’unique membre. \n Quittez-le plutôt.");
     }
   };
 
@@ -103,7 +103,7 @@ export const WorkspaceMembers = () => {
         members.map((member) => (member.id === memberId ? { ...member, role: newRole } : member))
       );
     } catch (err) {
-      setError('Erreur lors du changement de rôle');
+      setError("Vous ne pouvez pas modifier les rôles avec l’offre gratuite.");
     }
   };
 
@@ -185,10 +185,19 @@ export const WorkspaceMembers = () => {
         />
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Alert
+              severity="error"
+              sx={{
+                whiteSpace: 'pre-line',
+                '& .MuiAlert-message': { width: '100%', textAlign: 'center' },
+              }}
+            >
+              {error}
+            </Alert>
+          </Box>
         )}
+
 
         {filteredMembers.length > 0 ? (
           <List>
