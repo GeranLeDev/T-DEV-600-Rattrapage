@@ -176,7 +176,7 @@ const BoardLeftBar: React.FC<BoardLeftBarProps> = ({
 
                   {saveError && <Alert severity="error" sx={{ mb: 1 }}>{saveError}</Alert>}
                   {saveOk && <Alert severity="success" sx={{ mb: 1 }}>{saveOk}</Alert>}
-                  
+
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                     <Button
                       variant="outlined"
@@ -213,14 +213,6 @@ const BoardLeftBar: React.FC<BoardLeftBarProps> = ({
             </ListItem>
           </List>
         </Collapse>
-
-        {/* Favoris */}
-        <ListItem button sx={{ '&:hover': { bgcolor: colors.hover } }}>
-          <ListItemIcon sx={{ color: colors.text }}>
-            <StarIcon />
-          </ListItemIcon>
-          <ListItemText primary="Favoris" />
-        </ListItem>
 
         <Divider sx={{ borderColor: colors.border, my: 2 }} />
 
@@ -311,14 +303,6 @@ const BoardLeftBar: React.FC<BoardLeftBarProps> = ({
             ))}
           </List>
         </Collapse>
-
-        {/* Créer un tableau à partir d'un template */}
-        <ListItem button onClick={onTemplateClick}>
-          <ListItemIcon>
-            <AddIcon sx={{ color: colors.text }} />
-          </ListItemIcon>
-          <ListItemText primary="Créer un tableau à partir d'un template" />
-        </ListItem>
       </List>
     </Box>
   );
