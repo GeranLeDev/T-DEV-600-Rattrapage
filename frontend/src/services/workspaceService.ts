@@ -112,25 +112,25 @@ export const workspaceService = {
     await api.delete(`/organizations/${workspaceId}/members/${memberId}`);
   },
 
-  // Récupérer les membres d'un workspace par son ID
-  getMembers: async (workspaceId: string): Promise<Member[]> => {
-    try {
-      const { data } = await api.get(
-        `/organizations/${workspaceId}/members?fields=id,username,fullName,avatarUrl`
-      );
-  
-      return (Array.isArray(data) ? data : []).map((m: any) => ({
-        id: m.id,
-        username: m.username ?? '',
-        fullName: m.fullName ?? '',
-        avatar: m.avatarUrl ?? '',
-        role: 'member', // valeur par défaut (voir variante "roles" ci-dessous)
-      }));
-    } catch (error) {
-      console.error('Erreur lors de la récupération des membres:', error);
-      return [];
-    }
-  },
+  // Récupérer les membres d'un workspace avec leur rôle réel
+getMembers: async (workspaceId: string): Promise<Member[]> => {
+  const { data } = await api.get(
+    `/organizations/${workspaceId}/memberships?member=true`
+  );
+  return (Array.isArray(data) ? data : []).map((ms: any) => ({
+    id: ms.idMember,
+    username: ms.member?.username ?? '',
+    fullName: ms.member?.fullName ?? '',
+    avatar: ms.member?.avatarUrl ?? '',
+    // Trello: memberType = 'admin' | 'normal'
+    role: ms.memberType === 'admin' ? 'admin' : 'member',
+  }));
+  } catch (error) {
+    console.error('Erreur lors de la récupération des membres:', error);
+    return [];
+  }
+},
+
   
 
   // Mettre à jour le rôle d'un membre
@@ -140,7 +140,7 @@ export const workspaceService = {
     role: 'admin' | 'member'
   ): Promise<void> => {
     await api.put(`/organizations/${workspaceId}/members/${memberId}`, {
-      type: role,
+      type: role === 'admin' ? 'admin' : 'normal',
     });
-  },
+  },  
 };
