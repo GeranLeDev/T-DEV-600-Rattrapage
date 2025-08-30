@@ -83,7 +83,6 @@ const Navbar: React.FC = () => {
   const [loadingRecents, setLoadingRecents] = useState(false);
 
   useEffect(() => {
-    // Récupérer le workspace actuel et les workspaces récents au chargement
     const fetchData = async () => {
       try {
         const workspace = workspaceService.getCurrentWorkspace();
@@ -94,7 +93,6 @@ const Navbar: React.FC = () => {
         console.error('Erreur lors de la récupération des données:', error);
       }
     };
-
     fetchData();
   }, []);
 
@@ -110,7 +108,6 @@ const Navbar: React.FC = () => {
         setLoadingRecents(false);
       }
     };
-
     fetchRecentWorkspaces();
   }, []);
 
@@ -151,9 +148,7 @@ const Navbar: React.FC = () => {
     }
   };
 
-  const handleContextMenuClose = () => {
-    setSelectedWorkspaceId(null);
-  };
+  const handleContextMenuClose = () => setSelectedWorkspaceId(null);
 
   const handleManageMembers = () => {
     if (currentWorkspace) {
@@ -172,17 +167,12 @@ const Navbar: React.FC = () => {
   const handleDeleteWorkspace = async (workspaceId: string) => {
     try {
       await api.delete(`/organizations/${workspaceId}`);
-      // Mettre à jour la liste des workspaces récents
       const updatedRecents = recentWorkspaces.filter((w) => w.id !== workspaceId);
       setRecentWorkspaces(updatedRecents);
       handleContextMenuClose();
-      // Si on est sur la page du workspace supprimé, rediriger vers la liste des workspaces
-      if (currentWorkspace?.id === workspaceId) {
-        navigate('/workspaces');
-      }
+      if (currentWorkspace?.id === workspaceId) navigate('/workspaces');
     } catch (err: any) {
       console.error('Erreur lors de la suppression:', err);
-      // TODO: Ajouter un feedback visuel pour l'erreur
     }
   };
 
@@ -227,12 +217,8 @@ const Navbar: React.FC = () => {
               '& .MuiOutlinedInput-root': {
                 bgcolor: colors.input,
                 color: colors.text,
-                '& fieldset': {
-                  borderColor: colors.border,
-                },
-                '&:hover fieldset': {
-                  borderColor: colors.primary,
-                },
+                '& fieldset': { borderColor: colors.border },
+                '&:hover fieldset': { borderColor: colors.primary },
               },
             }}
           />
@@ -249,16 +235,13 @@ const Navbar: React.FC = () => {
         </Box>
       </Toolbar>
 
+      {/* Workspaces menu (inchangé) */}
       <Menu
         anchorEl={workspacesAnchorEl}
         open={Boolean(workspacesAnchorEl)}
         onClose={handleClose}
         PaperProps={{
-          sx: {
-            bgcolor: colors.card,
-            color: colors.text,
-            width: '250px',
-          },
+          sx: { bgcolor: colors.card, color: colors.text, width: '250px' },
         }}
       >
         <MenuItem onClick={handleViewAllWorkspaces}>
@@ -285,10 +268,7 @@ const Navbar: React.FC = () => {
           <>
             {recentWorkspaces.slice(0, 3).map((workspace) => (
               <Box key={workspace.id}>
-                <MenuItem
-                  onClick={() => handleWorkspaceClick(workspace)}
-                  sx={{ position: 'relative' }}
-                >
+                <MenuItem onClick={() => handleWorkspaceClick(workspace)} sx={{ position: 'relative' }}>
                   <Box sx={{ width: '100%' }}>
                     <Typography variant="subtitle2">
                       {workspace.displayName || workspace.name}
@@ -362,16 +342,13 @@ const Navbar: React.FC = () => {
         )}
       </Menu>
 
+      {/* Recent menu — affiche NOMS UNIQUEMENT */}
       <Menu
         anchorEl={recentAnchorEl}
         open={Boolean(recentAnchorEl)}
         onClose={handleClose}
         PaperProps={{
-          sx: {
-            bgcolor: colors.card,
-            color: colors.text,
-            width: '250px',
-          },
+          sx: { bgcolor: colors.card, color: colors.text, width: '250px' },
         }}
       >
         <Typography variant="subtitle2" sx={{ px: 2, py: 1, color: colors.textSecondary }}>
@@ -385,19 +362,17 @@ const Navbar: React.FC = () => {
           recentWorkspaces.slice(0, 3).map((workspace) => (
             <MenuItem
               key={workspace.id}
-              onClick={(event) => handleWorkspaceClick(workspace)}
+              onClick={() => handleWorkspaceClick(workspace)}
               sx={{ position: 'relative' }}
             >
-              <Box sx={{ width: '100%' }}>
-                <Typography variant="subtitle2">
-                  {workspace.displayName || workspace.name}
-                </Typography>
-                {workspace.description && (
-                  <Typography variant="caption" sx={{ color: colors.textSecondary }}>
-                    {workspace.description}
-                  </Typography>
-                )}
-              </Box>
+              <Typography
+                variant="subtitle2"
+                noWrap
+                title={workspace.displayName || workspace.name}
+                sx={{ width: '100%' }}
+              >
+                {workspace.displayName || workspace.name}
+              </Typography>
             </MenuItem>
           ))
         ) : (
@@ -417,7 +392,7 @@ const Navbar: React.FC = () => {
           <ListItemIcon>
             <ViewListIcon sx={{ color: colors.text }} />
           </ListItemIcon>
-          Voir tous les workspaces
+        Voir tous les workspaces
         </MenuItem>
       </Menu>
     </AppBar>
