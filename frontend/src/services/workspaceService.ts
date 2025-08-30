@@ -19,7 +19,7 @@ const getFavoriteIds = (): string[] => {
 const saveFavoriteIds = (ids: string[]) => {
   try {
     localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(ids));
-  } catch {}
+  } catch { }
 };
 
 const applyFavorites = <T extends { id: string; isFavorite?: boolean }>(items: T[]): T[] => {
@@ -118,11 +118,30 @@ export const workspaceService = {
   },
 
   // Récupérer tous les workspaces
+  // Récupérer tous les workspaces (avec description mappée)
   getAll: async (): Promise<Workspace[]> => {
-    const response = await api.get('/members/me/organizations');
-    // on renvoie la liste + favoris appliqués
-    return applyFavorites(response.data);
+    const { data } = await api.get('/members/me/organizations', {
+      params: {
+        // on demande explicitement les champs utiles (dont desc)
+        fields: 'id,name,displayName,desc,memberships,prefs,dateLastActivity,createdAt',
+      },
+    });
+
+    const mapped: Workspace[] = (Array.isArray(data) ? data : []).map((org: any) => ({
+      id: org.id,
+      name: org.name,
+      displayName: org.displayName,
+      description: org.desc || '',            // on mappe desc -> description
+      members: org.memberships || [],
+      isFavorite: false,                      // ssera écrasé par applyFavorites
+      createdAt: org.createdAt,
+      updatedAt: org.dateLastActivity,
+    }));
+
+    // applique les favoris locaux
+    return workspaceService.applyFavorites(mapped);
   },
+
 
   // Récupérer un workspace par son ID
   getById: async (id: string): Promise<Workspace> => {
