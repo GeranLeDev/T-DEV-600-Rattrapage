@@ -118,17 +118,16 @@ export const workspaceService = {
 
 
   // Générer un lien d'invitation
-  generateInviteLink: async (workspaceId: string): Promise<string> => {
-    const response = await api.post(`/organizations/${workspaceId}/invite-links`, {
-      expiresIn: '7d', // Le lien expire dans 7 jours
-    });
-    return response.data.token;
+  generateInviteLink: async (_workspaceId: string): Promise<string> => {
+    throw new Error('INVITE_LINK_NOT_SUPPORTED');
   },
 
   // Valider et accepter une invitation par lien
-  acceptInviteLink: async (workspaceId: string, token: string): Promise<void> => {
-    await api.post(`/organizations/${workspaceId}/invite-links/${token}/accept`);
+  // ⚠️ L'acceptation d'un lien 'trello.com/invite/...' se fait sur Trello (via cookie de session), pas via l'API REST.
+  acceptInviteLink: async (_workspaceId: string, _token: string): Promise<void> => {
+    throw new Error('INVITE_LINK_NOT_SUPPORTED');
   },
+
 
   // Supprimer un membre du workspace
   removeMember: async (workspaceId: string, memberId: string): Promise<void> => {

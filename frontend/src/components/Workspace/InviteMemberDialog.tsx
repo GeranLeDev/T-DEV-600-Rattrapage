@@ -147,7 +147,6 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
           }}
         >
           <Tab icon={<EmailIcon />} label="Par email" iconPosition="start" />
-          <Tab icon={<LinkIcon />} label="Lien d'invitation" iconPosition="start" />
           <Tab icon={<PersonAddIcon />} label="Direct" iconPosition="start" />
         </Tabs>
 
@@ -188,48 +187,6 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
             {directLoading ? 'Envoi…' : 'Ajouter le membre'}
           </Button>
         </TabPanel>
-
-        <TabPanel value={tabValue} index={1}>
-          <Typography variant="body2" sx={{ mb: 2, color: colors.textSecondary }}>
-            Collez un lien d’invitation Trello (créé depuis Trello) au format :
-            <br />
-            <code>https://trello.com/invite/&lt;id&gt;/&lt;token&gt;</code>
-          </Typography>
-
-          <TextField
-            fullWidth
-            placeholder="https://trello.com/invite/68b2de631d258e1c52a85aa9/ATTI612a3..."
-            value={trelloLink}
-            onChange={(e) => { setTrelloLink(e.target.value.trim()); setError(''); setSuccess(''); }}
-            sx={{
-              mb: 2,
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': { borderColor: colors.border },
-                '&:hover fieldset': { borderColor: colors.primary },
-              },
-            }}
-          />
-
-          {trelloLink && TRELO_INVITE_RE.test(trelloLink) && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2, bgcolor: colors.hover, borderRadius: 1 }}>
-              <Typography variant="body2" sx={{ flex: 1, wordBreak: 'break-all', color: colors.text }}>
-                <a href={trelloLink} target="_blank" rel="noreferrer">{trelloLink}</a>
-              </Typography>
-              <Tooltip title={copied ? 'Copié !' : 'Copier le lien'}>
-                <IconButton onClick={handleCopyLink} size="small" disabled={!trelloLink}>
-                  <CopyIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          )}
-
-          {!trelloLink && (
-            <Alert severity="info" sx={{ mt: 1 }}>
-              Dans Trello, ouvre <strong>Inviter</strong> → <em>Créer un lien</em>, puis colle-le ici.
-            </Alert>
-          )}
-        </TabPanel>
-
 
         <TabPanel value={tabValue} index={2}>
           <Typography variant="body2" sx={{ mb: 2, color: colors.textSecondary }}>
