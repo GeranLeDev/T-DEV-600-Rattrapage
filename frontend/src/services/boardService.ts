@@ -22,6 +22,11 @@ export const boardService = {
     return response.data;
   },
 
+  updateDescription: async (id: string, desc: string): Promise<Board> => {
+    const response = await api.put(`/boards/${id}`, { desc });
+    return response.data;
+  },
+
   delete: async (id: string): Promise<void> => {
     await api.delete(`/boards/${id}`);
   },

@@ -1,6 +1,9 @@
+import { useParams } from 'react-router-dom';
+import { boardService } from '../../services/boardService';
 import React, { useState } from 'react';
 import {
   Box,
+  Alert,
   List,
   ListItem,
   ListItemIcon,
@@ -62,6 +65,9 @@ const BoardLeftBar: React.FC<BoardLeftBarProps> = ({
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [descriptionValue, setDescriptionValue] = useState(description);
   const [savingDescription, setSavingDescription] = useState(false);
+  const { boardId } = useParams<{ boardId: string }>();
+  const [saveError, setSaveError] = useState<string>('');
+  const [saveOk, setSaveOk] = useState<string>('');
 
   const toggleSection = (section: string) => {
     setOpenSections((prev) => ({
@@ -75,18 +81,18 @@ const BoardLeftBar: React.FC<BoardLeftBarProps> = ({
   };
 
   const handleDescriptionSave = async () => {
-    if (onDescriptionUpdate) {
-      setSavingDescription(true);
-      try {
-        await onDescriptionUpdate(descriptionValue);
-        setIsEditingDescription(false);
-      } catch (error) {
-        // Gestion d'erreur si besoin
-      } finally {
-        setSavingDescription(false);
-      }
-    } else {
+    if (!boardId) return;
+    setSavingDescription(true);
+    setSaveError('');
+    setSaveOk('');
+    try {
+      await boardService.updateDescription(boardId, descriptionValue.trim());
+      setSaveOk('Description enregistrée.');
       setIsEditingDescription(false);
+    } catch (e) {
+      setSaveError("Impossible d'enregistrer la description.");
+    } finally {
+      setSavingDescription(false);
     }
   };
 
@@ -167,6 +173,10 @@ const BoardLeftBar: React.FC<BoardLeftBarProps> = ({
                     onChange={(e) => setDescriptionValue(e.target.value)}
                     sx={{ mb: 1 }}
                   />
+
+                  {saveError && <Alert severity="error" sx={{ mb: 1 }}>{saveError}</Alert>}
+                  {saveOk && <Alert severity="success" sx={{ mb: 1 }}>{saveOk}</Alert>}
+                  
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                     <Button
                       variant="outlined"
