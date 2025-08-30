@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { boardService } from '../../services/boardService';
 import {
   Paper,
   Typography,
@@ -65,6 +66,30 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [editName, setEditName] = useState(card.name);
   const [editDesc, setEditDesc] = useState(card.desc || '');
   const menuOpen = Boolean(anchorEl);
+  const [labelIds, setLabelIds] = useState<string[]>(card.labels || []);
+
+  useEffect(() => {
+    let mounted = true;
+  
+    (async () => {
+      try {
+        if (!card.labels || card.labels.length === 0) {
+          // On recharge depuis Trello pour la persistance après refresh
+          const labels = await boardService.getCardLabels(card.id);
+          if (mounted) setLabelIds(labels.map(l => l.id));
+        } else {
+          // Si le parent a déjà des labels, on les prend en dédoublonnant
+          setLabelIds(Array.from(new Set(card.labels)));
+        }
+      } catch (e) {
+        console.error('Erreur lors du chargement des étiquettes de la carte:', e);
+      }
+    })();
+  
+    return () => { mounted = false; };
+  }, [card.id, card.labels]);
+  
+  
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -101,19 +126,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   };
 
   const handleLabelChange = async (labelId: string) => {
-    if (!onAddLabel || !onRemoveLabel) return;
-
-    const isLabelAssigned = card.labels?.includes(labelId);
+    const isAssigned = labelIds.includes(labelId);
+  
     try {
-      if (isLabelAssigned) {
-        await onRemoveLabel(card.id, labelId);
+      if (isAssigned) {
+        await boardService.removeLabelFromCard(card.id, labelId);
+        setLabelIds(prev => prev.filter(id => id !== labelId));
       } else {
-        await onAddLabel(card.id, labelId);
+        await boardService.addLabelToCard(card.id, labelId);
+        setLabelIds(prev => Array.from(new Set([...prev, labelId])));
       }
     } catch (error) {
       console.error('Erreur lors de la modification des étiquettes:', error);
     }
   };
+  
+  
 
   const handleCardClick = (e: React.MouseEvent) => {
     if (onClick) {
@@ -169,9 +197,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       )}
 
       <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        {card.labels && card.labels.length > 0 && (
+        {labelIds.length > 0 && (
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-            {card.labels.map((labelId) => (
+            {labelIds.map((labelId) => (
               <Chip
                 key={labelId}
                 label=""
@@ -413,7 +441,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 <ListItemIcon>
                   <Checkbox
                     edge="start"
-                    checked={card.labels?.includes(label.id) || false}
+                    checked={labelIds.includes(label.id)}
                     tabIndex={-1}
                     disableRipple
                   />
