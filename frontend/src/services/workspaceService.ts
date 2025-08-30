@@ -86,13 +86,36 @@ export const workspaceService = {
     });
   },
 
-  // Ajouter un membre directement par son nom d'utilisateur
-  addMemberByUsername: async (workspaceId: string, username: string): Promise<void> => {
-    await api.put(`/organizations/${workspaceId}/members`, {
-      username: username,
-      type: 'normal',
-    });
+  // Ajouter un membre par username (invite Trello)
+  addMemberByUsername: async (
+    workspaceId: string,
+    username: string,
+    role: 'admin' | 'normal' = 'normal'
+  ): Promise<void> => {
+    const clean = username.trim().replace(/^@/, '');
+
+    try {
+      // ✅ Variante Trello fiable : username dans le path, role en query
+      await api.put(
+        `/organizations/${workspaceId}/members/${encodeURIComponent(clean)}?type=${role}`
+      );
+    } catch (err: any) {
+      // Fallback: ancien endpoint body (au cas où)
+      try {
+        await api.put(`/organizations/${workspaceId}/members`, {
+          username: clean,
+          type: role,
+        });
+      } catch (e: any) {
+        const s = e?.response?.status;
+        if (s === 401 || s === 403) throw new Error('PERM');      // pas les droits
+        if (s === 400 || s === 404) throw new Error('USERNAME');  // username invalide/inconnu
+        throw e;
+      }
+    }
   },
+
+
 
   // Générer un lien d'invitation
   generateInviteLink: async (workspaceId: string): Promise<string> => {
@@ -113,21 +136,21 @@ export const workspaceService = {
   },
 
   // Récupérer les membres d'un workspace avec leur rôle réel
-getMembers: async (workspaceId: string): Promise<Member[]> => {
-  const { data } = await api.get(
-    `/organizations/${workspaceId}/memberships?member=true`
-  );
-  return (Array.isArray(data) ? data : []).map((ms: any) => ({
-    id: ms.idMember,
-    username: ms.member?.username ?? '',
-    fullName: ms.member?.fullName ?? '',
-    avatar: ms.member?.avatarUrl ?? '',
-    // Trello: memberType = 'admin' | 'normal'
-    role: ms.memberType === 'admin' ? 'admin' : 'member',
-  }));
-},
+  getMembers: async (workspaceId: string): Promise<Member[]> => {
+    const { data } = await api.get(
+      `/organizations/${workspaceId}/memberships?member=true`
+    );
+    return (Array.isArray(data) ? data : []).map((ms: any) => ({
+      id: ms.idMember,
+      username: ms.member?.username ?? '',
+      fullName: ms.member?.fullName ?? '',
+      avatar: ms.member?.avatarUrl ?? '',
+      // Trello: memberType = 'admin' | 'normal'
+      role: ms.memberType === 'admin' ? 'admin' : 'member',
+    }));
+  },
 
-  
+
 
   // Mettre à jour le rôle d'un membre
   updateMemberRole: async (
@@ -138,5 +161,5 @@ getMembers: async (workspaceId: string): Promise<Member[]> => {
     await api.put(`/organizations/${workspaceId}/members/${memberId}`, {
       type: role === 'admin' ? 'admin' : 'normal',
     });
-  },  
+  },
 };

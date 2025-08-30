@@ -1,3 +1,4 @@
+import { workspaceService } from '../../services/workspaceService';
 import { workspaceJoinUrl } from '../../utils/urls';
 import React, { useState } from 'react';
 import {
@@ -22,6 +23,7 @@ import {
   PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
 import { useTheme } from '../../hooks/useTheme';
+const TRELO_INVITE_RE = /^https?:\/\/trello\.com\/invite\/(?:b\/)?[A-Za-z0-9]+\/[A-Za-z0-9]+/i;
 
 interface InviteMemberDialogProps {
   open: boolean;
@@ -63,8 +65,10 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [inviteLink, setInviteLink] = useState('');
+  const [trelloLink, setTrelloLink] = useState('');
   const [copied, setCopied] = useState(false);
+  const [directUsername, setDirectUsername] = useState('');
+  const [directLoading, setDirectLoading] = useState(false);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -83,18 +87,36 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
   };
 
   const handleCopyLink = () => {
-      if (!inviteLink) return;
-      const link = workspaceJoinUrl(workspaceId, inviteLink);
-      navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    };
-
-  const generateInviteLink = () => {
-    // Générer un token unique pour l'invitation
-    const token = Math.random().toString(36).substring(2, 15);
-    setInviteLink(token);
+    if (!TRELO_INVITE_RE.test(trelloLink)) {
+      setError("Lien Trello invalide. Format attendu : https://trello.com/invite/{id}/{token}");
+      return;
+    }
+    navigator.clipboard.writeText(trelloLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
+
+
+  const handleDirectInvite = async () => {
+    const username = directUsername.trim().replace(/^@/, '');
+    if (!username) return;
+    setError('');
+    setSuccess('');
+    setDirectLoading(true);
+    try {
+      // ⇩ mets 'admin' si tu veux inviter en admin par défaut
+      await workspaceService.addMemberByUsername(workspaceId, username, 'normal');
+      setSuccess(`Invitation envoyée à @${username}`);
+      setDirectUsername('');
+    } catch (e: any) {
+      if (e?.message === 'PERM') setError("Permissions insuffisantes pour inviter des membres.");
+      else if (e?.message === 'USERNAME') setError("Nom d'utilisateur introuvable.");
+      else setError("Erreur lors de l'invitation par nom d'utilisateur.");
+    } finally {
+      setDirectLoading(false);
+    }
+  };
+
 
   return (
     <Dialog
@@ -159,72 +181,68 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
           />
           <Button
             variant="contained"
-            onClick={handleEmailInvite}
-            sx={{
-              mt: 2,
-              bgcolor: colors.primary,
-              '&:hover': { bgcolor: colors.secondary },
-            }}
+            onClick={handleDirectInvite}
+            disabled={!directUsername.trim() || directLoading}
+            sx={{ mt: 2, bgcolor: colors.primary, '&:hover': { bgcolor: colors.secondary } }}
           >
-            Envoyer l'invitation
+            {directLoading ? 'Envoi…' : 'Ajouter le membre'}
           </Button>
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
           <Typography variant="body2" sx={{ mb: 2, color: colors.textSecondary }}>
-            Générez un lien d'invitation unique pour partager avec vos membres
+            Collez un lien d’invitation Trello (créé depuis Trello) au format :
+            <br />
+            <code>https://trello.com/invite/&lt;id&gt;/&lt;token&gt;</code>
           </Typography>
-          <Button
-            variant="outlined"
-            onClick={generateInviteLink}
+
+          <TextField
+            fullWidth
+            placeholder="https://trello.com/invite/68b2de631d258e1c52a85aa9/ATTI612a3..."
+            value={trelloLink}
+            onChange={(e) => { setTrelloLink(e.target.value.trim()); setError(''); setSuccess(''); }}
             sx={{
               mb: 2,
-              borderColor: colors.border,
-              color: colors.text,
-              '&:hover': { borderColor: colors.primary },
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': { borderColor: colors.border },
+                '&:hover fieldset': { borderColor: colors.primary },
+              },
             }}
-          >
-            Générer un lien
-          </Button>
-          {inviteLink && (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                p: 2,
-                bgcolor: colors.hover,
-                borderRadius: 1,
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{
-                  flex: 1,
-                  wordBreak: 'break-all',
-                  color: colors.text,
-                }}
-              >
-                {workspaceJoinUrl(workspaceId, inviteLink)}
+          />
+
+          {trelloLink && TRELO_INVITE_RE.test(trelloLink) && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2, bgcolor: colors.hover, borderRadius: 1 }}>
+              <Typography variant="body2" sx={{ flex: 1, wordBreak: 'break-all', color: colors.text }}>
+                <a href={trelloLink} target="_blank" rel="noreferrer">{trelloLink}</a>
               </Typography>
               <Tooltip title={copied ? 'Copié !' : 'Copier le lien'}>
-                <IconButton onClick={handleCopyLink} size="small">
+                <IconButton onClick={handleCopyLink} size="small" disabled={!trelloLink}>
                   <CopyIcon />
                 </IconButton>
               </Tooltip>
             </Box>
           )}
+
+          {!trelloLink && (
+            <Alert severity="info" sx={{ mt: 1 }}>
+              Dans Trello, ouvre <strong>Inviter</strong> → <em>Créer un lien</em>, puis colle-le ici.
+            </Alert>
+          )}
         </TabPanel>
+
 
         <TabPanel value={tabValue} index={2}>
           <Typography variant="body2" sx={{ mb: 2, color: colors.textSecondary }}>
-            Ajoutez directement un membre en utilisant son nom d'utilisateur
+            Ajoutez directement un membre en utilisant son nom d'utilisateur Trello
           </Typography>
+
           <TextField
             autoFocus
             margin="dense"
-            label="Nom d'utilisateur"
+            label="Nom d'utilisateur Trello (ex : johndoe ou @johndoe)"
             fullWidth
+            value={directUsername}
+            onChange={(e) => setDirectUsername(e.target.value)}
             sx={{
               '& .MuiOutlinedInput-root': {
                 '& fieldset': { borderColor: colors.border },
@@ -232,17 +250,17 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
               },
             }}
           />
+
           <Button
             variant="contained"
-            sx={{
-              mt: 2,
-              bgcolor: colors.primary,
-              '&:hover': { bgcolor: colors.secondary },
-            }}
+            onClick={handleDirectInvite}
+            disabled={!directUsername.trim() || directLoading}
+            sx={{ mt: 2, bgcolor: colors.primary, '&:hover': { bgcolor: colors.secondary } }}
           >
-            Ajouter le membre
+            {directLoading ? 'Envoi…' : 'Ajouter le membre'}
           </Button>
         </TabPanel>
+
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} sx={{ color: colors.textSecondary }}>
