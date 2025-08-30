@@ -24,7 +24,10 @@ import {
   Group as GroupIcon,
   ViewList as ViewListIcon,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { AppDispatch } from '../../store';
+import { fetchWorkspaces } from '../../store/slices/workspaceSlice'
 import { useTheme } from '../../hooks/useTheme';
 import { ThemeSelector } from '../Theme/ThemeSelector';
 import { workspaceService } from '../../services/workspaceService';
@@ -74,6 +77,8 @@ const SearchInput = styled(TextField)`
 
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch<AppDispatch>();
   const { colors, shadows } = useTheme();
   const [recentAnchorEl, setRecentAnchorEl] = useState<null | HTMLElement>(null);
   const [workspacesAnchorEl, setWorkspacesAnchorEl] = useState<null | HTMLElement>(null);
@@ -133,7 +138,7 @@ const Navbar: React.FC = () => {
     navigate(`/workspace/${id}`);
     handleClose();
   };
-  
+
 
   const handleWorkspaceSettings = (id: string) => {
     navigate(`/workspaces/${id}/settings`);
@@ -168,11 +173,25 @@ const Navbar: React.FC = () => {
   const handleDeleteWorkspace = async (workspaceId: string) => {
     try {
       await api.delete(`/organizations/${workspaceId}`);
-      const updatedRecents = recentWorkspaces.filter((w) => w.id !== workspaceId);
+
+      // MAJ du menu "Workspaces" (local à la navbar)
+      const updatedRecents = recentWorkspaces.filter(w => w.id !== workspaceId);
       setRecentWorkspaces(updatedRecents);
       handleContextMenuClose();
-      if (currentWorkspace?.id === workspaceId) navigate('/workspaces');
-    } catch (err: any) {
+
+      // Si on était sur la page du workspace supprimé → aller à la liste et recharger la liste
+      if (currentWorkspace?.id === workspaceId) {
+        navigate('/workspaces');
+        await dispatch(fetchWorkspaces());
+        return;
+      }
+
+      // Si on est déjà sur la liste → refetch pour voir l'item disparaître immédiatement
+      if (location.pathname.startsWith('/workspaces')) {
+        await dispatch(fetchWorkspaces());
+        // (fallback dur si jamais) :
+      }
+    } catch (err) {
       console.error('Erreur lors de la suppression:', err);
     }
   };
