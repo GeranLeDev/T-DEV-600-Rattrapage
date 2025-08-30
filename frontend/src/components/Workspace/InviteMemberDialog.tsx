@@ -1,5 +1,4 @@
 import { workspaceService } from '../../services/workspaceService';
-import { workspaceJoinUrl } from '../../utils/urls';
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -12,18 +11,13 @@ import {
   Tab,
   Box,
   Typography,
-  IconButton,
-  Tooltip,
   Alert,
 } from '@mui/material';
 import {
-  ContentCopy as CopyIcon,
   Email as EmailIcon,
-  Link as LinkIcon,
   PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
 import { useTheme } from '../../hooks/useTheme';
-const TRELO_INVITE_RE = /^https?:\/\/trello\.com\/invite\/(?:b\/)?[A-Za-z0-9]+\/[A-Za-z0-9]+/i;
 
 interface InviteMemberDialogProps {
   open: boolean;
@@ -40,7 +34,6 @@ interface TabPanelProps {
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -65,12 +58,10 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [trelloLink, setTrelloLink] = useState('');
-  const [copied, setCopied] = useState(false);
   const [directUsername, setDirectUsername] = useState('');
   const [directLoading, setDirectLoading] = useState(false);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     setError('');
     setSuccess('');
@@ -78,24 +69,13 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
 
   const handleEmailInvite = async () => {
     try {
-      await onInvite(email);
+      await onInvite(email.trim());
       setSuccess('Invitation envoyée avec succès');
       setEmail('');
-    } catch (err) {
+    } catch {
       setError("Erreur lors de l'envoi de l'invitation");
     }
   };
-
-  const handleCopyLink = () => {
-    if (!TRELO_INVITE_RE.test(trelloLink)) {
-      setError("Lien Trello invalide. Format attendu : https://trello.com/invite/{id}/{token}");
-      return;
-    }
-    navigator.clipboard.writeText(trelloLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
 
   const handleDirectInvite = async () => {
     const username = directUsername.trim().replace(/^@/, '');
@@ -104,19 +84,18 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
     setSuccess('');
     setDirectLoading(true);
     try {
-      // ⇩ mets 'admin' si tu veux inviter en admin par défaut
+      // Passe 'admin' à la place de 'normal' si tu veux inviter en admin par défaut
       await workspaceService.addMemberByUsername(workspaceId, username, 'normal');
       setSuccess(`Invitation envoyée à @${username}`);
       setDirectUsername('');
     } catch (e: any) {
-      if (e?.message === 'PERM') setError("Permissions insuffisantes pour inviter des membres.");
+      if (e?.message === 'PERM') setError('Permissions insuffisantes pour inviter des membres.');
       else if (e?.message === 'USERNAME') setError("Nom d'utilisateur introuvable.");
       else setError("Erreur lors de l'invitation par nom d'utilisateur.");
     } finally {
       setDirectLoading(false);
     }
   };
-
 
   return (
     <Dialog
@@ -125,10 +104,7 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
       maxWidth="sm"
       fullWidth
       PaperProps={{
-        sx: {
-          bgcolor: colors.card,
-          color: colors.text,
-        },
+        sx: { bgcolor: colors.card, color: colors.text },
       }}
     >
       <DialogTitle>Inviter un membre</DialogTitle>
@@ -140,9 +116,7 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
             borderBottom: `1px solid ${colors.border}`,
             '& .MuiTab-root': {
               color: colors.textSecondary,
-              '&.Mui-selected': {
-                color: colors.primary,
-              },
+              '&.Mui-selected': { color: colors.primary },
             },
           }}
         >
@@ -155,13 +129,13 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
             {error}
           </Alert>
         )}
-
         {success && (
           <Alert severity="success" sx={{ mt: 2 }}>
             {success}
           </Alert>
         )}
 
+        {/* Onglet PAR EMAIL */}
         <TabPanel value={tabValue} index={0}>
           <TextField
             autoFocus
@@ -180,21 +154,20 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
           />
           <Button
             variant="contained"
-            onClick={handleDirectInvite}
-            disabled={!directUsername.trim() || directLoading}
+            onClick={handleEmailInvite}
+            disabled={!email.trim()}
             sx={{ mt: 2, bgcolor: colors.primary, '&:hover': { bgcolor: colors.secondary } }}
           >
-            {directLoading ? 'Envoi…' : 'Ajouter le membre'}
+            Envoyer l'invitation
           </Button>
         </TabPanel>
 
-        <TabPanel value={tabValue} index={2}>
+        {/* Onglet DIRECT (@username) */}
+        <TabPanel value={tabValue} index={1}>
           <Typography variant="body2" sx={{ mb: 2, color: colors.textSecondary }}>
             Ajoutez directement un membre en utilisant son nom d'utilisateur Trello
           </Typography>
-
           <TextField
-            autoFocus
             margin="dense"
             label="Nom d'utilisateur Trello (ex : johndoe ou @johndoe)"
             fullWidth
@@ -207,7 +180,6 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
               },
             }}
           />
-
           <Button
             variant="contained"
             onClick={handleDirectInvite}
@@ -217,8 +189,8 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
             {directLoading ? 'Envoi…' : 'Ajouter le membre'}
           </Button>
         </TabPanel>
-
       </DialogContent>
+
       <DialogActions>
         <Button onClick={onClose} sx={{ color: colors.textSecondary }}>
           Fermer

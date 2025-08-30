@@ -33,12 +33,13 @@ export const WorkspaceSettings = () => {
   const [success, setSuccess] = useState('');
   const [openDelete, setOpenDelete] = useState(false);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
+
+  // ⬇️ plus de enableNotifications dans le formulaire
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     isPrivate: true,
     allowInvites: true,
-    enableNotifications: true,
   });
 
   useEffect(() => {
@@ -48,9 +49,7 @@ export const WorkspaceSettings = () => {
       try {
         setLoading(true);
         const response = await api.get(`/organizations/${workspaceId}`, {
-          params: {
-            fields: 'id,name,displayName,desc,prefs',
-          },
+          params: { fields: 'id,name,displayName,desc,prefs' },
         });
 
         const workspaceData = response.data;
@@ -60,7 +59,6 @@ export const WorkspaceSettings = () => {
           description: workspaceData.desc || '',
           isPrivate: workspaceData.prefs?.permissionLevel === 'private',
           allowInvites: workspaceData.prefs?.invitations === 'members',
-          enableNotifications: workspaceData.prefs?.notifications || true,
         });
       } catch (err) {
         console.error('Erreur lors de la récupération du workspace:', err);
@@ -81,13 +79,8 @@ export const WorkspaceSettings = () => {
     }));
   };
 
-  const formatShortName = (name: string): string => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '_') // Remplace les caractères non autorisés par des underscores
-      .replace(/_{2,}/g, '_') // Remplace les underscores multiples par un seul
-      .replace(/^_|_$/g, ''); // Supprime les underscores au début et à la fin
-  };
+  const formatShortName = (name: string): string =>
+    name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_{2,}/g, '_').replace(/^_|_$/g, '');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,38 +89,31 @@ export const WorkspaceSettings = () => {
     setSuccess('');
 
     try {
-      // Mise à jour du nom affiché et de la description uniquement
+      // Nom + description
       await api.put(`/organizations/${workspaceId}`, {
         displayName: formData.name,
         desc: formData.description,
       });
 
-      // Mise à jour de la visibilité
+      // Visibilité
       if (workspace?.prefs?.permissionLevel !== (formData.isPrivate ? 'private' : 'public')) {
         await api.put(`/organizations/${workspaceId}`, {
           prefs_permissionLevel: formData.isPrivate ? 'private' : 'public',
         });
       }
 
-      // Mise à jour des permissions d'invitation
+      // Permissions d'invitation
       if (workspace?.prefs?.invitations !== (formData.allowInvites ? 'members' : 'admins')) {
         await api.put(`/organizations/${workspaceId}`, {
           prefs_invitations: formData.allowInvites ? 'members' : 'admins',
         });
       }
 
-      // Mise à jour des notifications
-      if (workspace?.prefs?.notifications !== formData.enableNotifications) {
-        await api.put(`/organizations/${workspaceId}`, {
-          prefs_notifications: formData.enableNotifications,
-        });
-      }
+      // ⬇️ bloc notifications supprimé
 
-      // Recharger les données du workspace
+      // Rafraîchir
       const response = await api.get(`/organizations/${workspaceId}`, {
-        params: {
-          fields: 'id,name,displayName,desc,prefs',
-        },
+        params: { fields: 'id,name,displayName,desc,prefs' },
       });
       setWorkspace(response.data);
 
@@ -159,9 +145,7 @@ export const WorkspaceSettings = () => {
 
   if (loading && !workspace) {
     return (
-      <Box
-        sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}
-      >
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <CircularProgress />
       </Box>
     );
@@ -174,17 +158,8 @@ export const WorkspaceSettings = () => {
           Paramètres du workspace
         </Typography>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {success}
-          </Alert>
-        )}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
         <form onSubmit={handleSubmit}>
           <FormControl fullWidth sx={{ mb: 3 }}>
@@ -260,18 +235,7 @@ export const WorkspaceSettings = () => {
             sx={{ mb: 2, color: colors.text }}
           />
 
-          <FormControlLabel
-            control={
-              <Switch
-                checked={formData.enableNotifications}
-                onChange={handleChange}
-                name="enableNotifications"
-                color="primary"
-              />
-            }
-            label="Activer les notifications"
-            sx={{ mb: 3, color: colors.text }}
-          />
+          {/* ⬇️ switch "Activer les notifications" supprimé */}
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
             <Button
@@ -288,10 +252,7 @@ export const WorkspaceSettings = () => {
               type="submit"
               variant="contained"
               disabled={loading}
-              sx={{
-                bgcolor: colors.primary,
-                '&:hover': { bgcolor: colors.secondary },
-              }}
+              sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: colors.secondary } }}
             >
               {loading ? <CircularProgress size={24} /> : 'Enregistrer les modifications'}
             </Button>
@@ -302,12 +263,7 @@ export const WorkspaceSettings = () => {
       <Dialog
         open={openDelete}
         onClose={() => setOpenDelete(false)}
-        PaperProps={{
-          sx: {
-            bgcolor: colors.card,
-            color: colors.text,
-          },
-        }}
+        PaperProps={{ sx: { bgcolor: colors.card, color: colors.text } }}
       >
         <DialogTitle>Confirmer la suppression</DialogTitle>
         <DialogContent>
@@ -320,12 +276,7 @@ export const WorkspaceSettings = () => {
           <Button onClick={() => setOpenDelete(false)} sx={{ color: colors.textSecondary }}>
             Annuler
           </Button>
-          <Button
-            onClick={handleDelete}
-            color="error"
-            disabled={loading}
-            sx={{ color: 'error.main' }}
-          >
+          <Button onClick={handleDelete} color="error" disabled={loading} sx={{ color: 'error.main' }}>
             {loading ? <CircularProgress size={24} /> : 'Supprimer'}
           </Button>
         </DialogActions>
