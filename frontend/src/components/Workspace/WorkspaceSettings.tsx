@@ -56,7 +56,7 @@ export const WorkspaceSettings = () => {
           name: data.displayName || data.name,
           description: data.desc || '',
           isPrivate: data.prefs?.permissionLevel === 'private',
-          allowInvites: data.prefs?.invitations === 'members',
+          allowInvites: true,
         });
       } catch (err) {
         console.error('Erreur lors du chargement du workspace:', err);
@@ -250,15 +250,15 @@ export const WorkspaceSettings = () => {
           <FormControlLabel
             control={
               <Switch
-                checked={formData.allowInvites}
-                onChange={handleChange}
-                name="allowInvites"
+                checked // toujours ON
+                disabled // non modifiable
                 color="primary"
               />
             }
             label="Autoriser les membres à inviter"
             sx={{ mb: 2, color: colors.text }}
           />
+
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
             <Button
