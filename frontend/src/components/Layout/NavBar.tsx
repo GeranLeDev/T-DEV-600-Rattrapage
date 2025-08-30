@@ -15,7 +15,6 @@ import {
 } from '@mui/material';
 import {
   Home as HomeIcon,
-  Notifications as NotificationsIcon,
   Person as PersonIcon,
   Add as AddIcon,
   Settings as SettingsIcon,
@@ -286,7 +285,6 @@ const Navbar: React.FC = () => {
         <Box sx={{ display: 'flex', gap: 1 }}>
           <ThemeSelector />
           <IconButton color="inherit">
-            <NotificationsIcon />
           </IconButton>
           <IconButton color="inherit">
             <PersonIcon />
