@@ -46,6 +46,7 @@ export const WorkspaceMembers = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const lower = (v?: string) => (v ?? '').toLowerCase();
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -116,11 +117,15 @@ export const WorkspaceMembers = () => {
     setSelectedMember(null);
   };
 
-  const filteredMembers = members.filter(
-    (member) =>
-      member.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const list = Array.isArray(members) ? members : [];
+  const q = lower(searchQuery);
+
+  const filteredMembers = list.filter((m) => {
+    const username = lower(m.username);
+    const fullName = lower(m.fullName);
+    return username.includes(q) || fullName.includes(q);
+  });
+
 
   if (loading) {
     return (
