@@ -130,9 +130,10 @@ const Navbar: React.FC = () => {
   };
 
   const handleEditWorkspace = (id: string) => {
-    navigate(`/workspaces/${id}/edit`);
+    navigate(`/workspace/${id}`);
     handleClose();
   };
+  
 
   const handleWorkspaceSettings = (id: string) => {
     navigate(`/workspaces/${id}/settings`);
