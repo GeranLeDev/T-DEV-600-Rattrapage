@@ -19,7 +19,7 @@ const getFavoriteIds = (): string[] => {
 const saveFavoriteIds = (ids: string[]) => {
   try {
     localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(ids));
-  } catch { }
+  } catch {}
 };
 
 const applyFavorites = <T extends { id: string; isFavorite?: boolean }>(items: T[]): T[] => {
