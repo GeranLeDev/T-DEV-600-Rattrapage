@@ -1,3 +1,4 @@
+import { workspaceJoinUrl } from '../../utils/urls';
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -82,11 +83,12 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
   };
 
   const handleCopyLink = () => {
-    const link = `${window.location.origin}/workspaces/${workspaceId}/join?token=${inviteLink}`;
-    navigator.clipboard.writeText(link);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+      if (!inviteLink) return;
+      const link = workspaceJoinUrl(workspaceId, inviteLink);
+      navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    };
 
   const generateInviteLink = () => {
     // Générer un token unique pour l'invitation
@@ -203,7 +205,7 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
                   color: colors.text,
                 }}
               >
-                {`${window.location.origin}/workspaces/${workspaceId}/join?token=${inviteLink}`}
+                {workspaceJoinUrl(workspaceId, inviteLink)}
               </Typography>
               <Tooltip title={copied ? 'Copié !' : 'Copier le lien'}>
                 <IconButton onClick={handleCopyLink} size="small">
