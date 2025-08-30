@@ -235,7 +235,7 @@ const Navbar: React.FC = () => {
         </Box>
       </Toolbar>
 
-      {/* Workspaces menu (inchangé) */}
+      {/* Workspaces menu — affiche NOMS UNIQUEMENT */}
       <Menu
         anchorEl={workspacesAnchorEl}
         open={Boolean(workspacesAnchorEl)}
@@ -260,6 +260,7 @@ const Navbar: React.FC = () => {
         <Typography variant="caption" sx={{ px: 2, py: 1, color: colors.textSecondary }}>
           Vos 3 workspaces les plus récents
         </Typography>
+
         {loadingRecents ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
             <CircularProgress size={24} />
@@ -268,18 +269,20 @@ const Navbar: React.FC = () => {
           <>
             {recentWorkspaces.slice(0, 3).map((workspace) => (
               <Box key={workspace.id}>
-                <MenuItem onClick={() => handleWorkspaceClick(workspace)} sx={{ position: 'relative' }}>
-                  <Box sx={{ width: '100%' }}>
-                    <Typography variant="subtitle2">
-                      {workspace.displayName || workspace.name}
-                    </Typography>
-                    {workspace.description && (
-                      <Typography variant="caption" sx={{ color: colors.textSecondary }}>
-                        {workspace.description}
-                      </Typography>
-                    )}
-                  </Box>
+                <MenuItem
+                  onClick={() => handleWorkspaceClick(workspace)}
+                  sx={{ position: 'relative' }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    noWrap
+                    title={workspace.displayName || workspace.name}
+                    sx={{ width: '100%' }}
+                  >
+                    {workspace.displayName || workspace.name}
+                  </Typography>
                 </MenuItem>
+
                 {selectedWorkspaceId === workspace.id && (
                   <Box sx={{ px: 2, py: 1, bgcolor: colors.hover }}>
                     <MenuItem
@@ -392,9 +395,10 @@ const Navbar: React.FC = () => {
           <ListItemIcon>
             <ViewListIcon sx={{ color: colors.text }} />
           </ListItemIcon>
-        Voir tous les workspaces
+          Voir tous les workspaces
         </MenuItem>
       </Menu>
+
     </AppBar>
   );
 };
