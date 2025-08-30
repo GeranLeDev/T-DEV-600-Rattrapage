@@ -148,6 +148,12 @@ const Navbar: React.FC = () => {
       .finally(() => setLoadingRecents(false));
   };
 
+  const goToWorkspace = (w: Workspace) => {
+    workspaceService.setCurrentWorkspace(w);
+    navigate(`/workspace/${w.id}`);
+    handleClose();
+  };
+
   const handleWorkspacesClick = (event: React.MouseEvent<HTMLElement>) => {
     setWorkspacesAnchorEl(event.currentTarget);
     setLoadingRecents(true);
@@ -418,7 +424,7 @@ const Navbar: React.FC = () => {
           recentWorkspaces.slice(0, 3).map((workspace) => (
             <MenuItem
               key={workspace.id}
-              onClick={() => handleWorkspaceClick(workspace)}
+              onClick={() => goToWorkspace(workspace)}
               sx={{ position: 'relative' }}
             >
               <Typography
@@ -430,6 +436,7 @@ const Navbar: React.FC = () => {
                 {workspace.displayName || workspace.name}
               </Typography>
             </MenuItem>
+
           ))
         ) : (
           <MenuItem disabled>
