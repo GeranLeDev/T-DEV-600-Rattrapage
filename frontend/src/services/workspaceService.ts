@@ -19,7 +19,7 @@ const getFavoriteIds = (): string[] => {
 const saveFavoriteIds = (ids: string[]) => {
   try {
     localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(ids));
-  } catch {}
+  } catch { }
 };
 
 const applyFavorites = <T extends { id: string; isFavorite?: boolean }>(items: T[]): T[] => {
@@ -32,6 +32,14 @@ const withFavorite = <T extends { id: string; isFavorite?: boolean }>(item: T): 
   return { ...item, isFavorite: favs.includes(item.id) };
 };
 
+// Génère un "name" valide pour Trello (slug)
+const slugify = (s: string) =>
+  (s || 'workspace')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64);
 
 export const workspaceService = {
   isWorkspaceFavorite: (workspaceId: string): boolean => {
@@ -151,9 +159,45 @@ export const workspaceService = {
 
   // Créer un nouveau workspace
   create: async (data: WorkspaceCreate): Promise<Workspace> => {
-    const response = await api.post('/organizations', data);
-    return withFavorite(response.data);
+    // ⚠️ Trello attend `desc` (pas `description`) + un `name` (slug) et un `displayName`
+    const payload: any = {
+      displayName: data.displayName ?? data.name,
+      desc: data.description ?? '',
+      name: data.name ? slugify(data.name) : slugify(data.displayName || 'workspace'),
+    };
+
+    // Si tu as un switch privé/public au moment de la création
+    if (typeof (data as any).isPrivate === 'boolean') {
+      payload.prefs_permissionLevel = (data as any).isPrivate ? 'private' : 'public';
+    }
+
+    // Création
+    const { data: created } = await api.post('/organizations', payload);
+
+    // Relecture avec les champs utiles (inclut `desc`)
+    const { data: org } = await api.get(`/organizations/${created.id}`, {
+      params: {
+        fields: 'id,name,displayName,desc,memberships,prefs,dateLastActivity,createdAt',
+      },
+    });
+
+    // Normalisation dans le format de l’app
+    const ws: Workspace = {
+      id: org.id,
+      name: org.name,
+      displayName: org.displayName,
+      description: org.desc || '',
+      members: org.memberships || [],
+      isFavorite: workspaceService.isWorkspaceFavorite(org.id),
+      createdAt: org.createdAt,
+      updatedAt: org.dateLastActivity,
+    };
+
+    // Garde le "courant" et les récents en phase
+    workspaceService.setCurrentWorkspace(ws);
+    return ws;
   },
+
 
   // Mettre à jour un workspace
   update: async (id: string, data: WorkspaceUpdate): Promise<Workspace> => {
