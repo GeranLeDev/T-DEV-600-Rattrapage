@@ -125,10 +125,6 @@ getMembers: async (workspaceId: string): Promise<Member[]> => {
     // Trello: memberType = 'admin' | 'normal'
     role: ms.memberType === 'admin' ? 'admin' : 'member',
   }));
-  } catch (error) {
-    console.error('Erreur lors de la récupération des membres:', error);
-    return [];
-  }
 },
 
   
