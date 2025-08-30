@@ -34,7 +34,6 @@ export const WorkspaceSettings = () => {
   const [openDelete, setOpenDelete] = useState(false);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
 
-  // ⬇️ plus de enableNotifications dans le formulaire
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -48,20 +47,19 @@ export const WorkspaceSettings = () => {
 
       try {
         setLoading(true);
-        const response = await api.get(`/organizations/${workspaceId}`, {
+        const { data } = await api.get(`/organizations/${workspaceId}`, {
           params: { fields: 'id,name,displayName,desc,prefs' },
         });
 
-        const workspaceData = response.data;
-        setWorkspace(workspaceData);
+        setWorkspace(data);
         setFormData({
-          name: workspaceData.displayName || workspaceData.name,
-          description: workspaceData.desc || '',
-          isPrivate: workspaceData.prefs?.permissionLevel === 'private',
-          allowInvites: workspaceData.prefs?.invitations === 'members',
+          name: data.displayName || data.name,
+          description: data.desc || '',
+          isPrivate: data.prefs?.permissionLevel === 'private',
+          allowInvites: data.prefs?.invitations === 'members',
         });
       } catch (err) {
-        console.error('Erreur lors de la récupération du workspace:', err);
+        console.error('Erreur lors du chargement du workspace:', err);
         setError('Impossible de charger les données du workspace');
       } finally {
         setLoading(false);
@@ -72,57 +70,68 @@ export const WorkspaceSettings = () => {
   }, [workspaceId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, checked } = e.target;
+    const { name, value, checked, type } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: e.target.type === 'checkbox' ? checked : value,
+      [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
-  const formatShortName = (name: string): string =>
-    name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_{2,}/g, '_').replace(/^_|_$/g, '');
+  // Le switch ne fait qu'actualiser le state local (pas d'appel API ici)
+  const handleTogglePrivacy = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newIsPrivate = e.target.checked;
+    setFormData((prev) => ({ ...prev, isPrivate: newIsPrivate }));
+    setSuccess('');
+    setError('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!workspaceId) return;
+
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      // Nom + description
+      // 1) Nom + description
       await api.put(`/organizations/${workspaceId}`, {
         displayName: formData.name,
         desc: formData.description,
       });
 
-      // Visibilité
-      if (workspace?.prefs?.permissionLevel !== (formData.isPrivate ? 'private' : 'public')) {
-        await api.put(`/organizations/${workspaceId}`, {
-          prefs_permissionLevel: formData.isPrivate ? 'private' : 'public',
-        });
+      // 2) Visibilité (private/public) — utiliser des slashes dans les clés, en query params
+      const desiredPermission = formData.isPrivate ? 'private' : 'public';
+      if (workspace?.prefs?.permissionLevel !== desiredPermission) {
+        await api.put(
+          `/organizations/${workspaceId}`,
+          undefined,
+          { params: { 'prefs/permissionLevel': desiredPermission } }
+        );
       }
 
-      // Permissions d'invitation
-      if (workspace?.prefs?.invitations !== (formData.allowInvites ? 'members' : 'admins')) {
-        await api.put(`/organizations/${workspaceId}`, {
-          prefs_invitations: formData.allowInvites ? 'members' : 'admins',
-        });
+      // 3) Permissions d'invitation
+      const desiredInvites = formData.allowInvites ? 'members' : 'admins';
+      if (workspace?.prefs?.invitations !== desiredInvites) {
+        await api.put(
+          `/organizations/${workspaceId}`,
+          undefined,
+          { params: { 'prefs/invitations': desiredInvites } }
+        );
       }
 
-      // ⬇️ bloc notifications supprimé
-
-      // Rafraîchir
-      const response = await api.get(`/organizations/${workspaceId}`, {
+      // 4) Rafraîchir l’objet serveur
+      const refreshed = await api.get(`/organizations/${workspaceId}`, {
         params: { fields: 'id,name,displayName,desc,prefs' },
       });
-      setWorkspace(response.data);
+      setWorkspace(refreshed.data);
 
       setSuccess('Les paramètres ont été mis à jour avec succès');
     } catch (err: any) {
-      console.error('Erreur lors de la mise à jour:', err);
+      console.error('Erreur lors de la mise à jour:', err?.response?.data || err);
       setError(
-        err.response?.data?.message ||
-          'Une erreur est survenue lors de la mise à jour des paramètres'
+        err?.response?.data?.message ||
+        'Une erreur est survenue lors de la mise à jour des paramètres'
       );
     } finally {
       setLoading(false);
@@ -130,6 +139,7 @@ export const WorkspaceSettings = () => {
   };
 
   const handleDelete = async () => {
+    if (!workspaceId) return;
     try {
       setLoading(true);
       await api.delete(`/organizations/${workspaceId}`);
@@ -154,8 +164,24 @@ export const WorkspaceSettings = () => {
   return (
     <Box sx={{ p: 3, maxWidth: '800px', margin: '0 auto' }}>
       <Paper sx={{ p: 3, bgcolor: colors.card, boxShadow: shadows.card }}>
-        <Typography variant="h5" sx={{ mb: 3, color: colors.text }}>
+        <Typography
+          variant="h5"
+          sx={{ mb: 3, color: colors.text, display: 'flex', alignItems: 'center', gap: 1 }}
+        >
           Paramètres du workspace
+          <Box
+            component="span"
+            sx={{
+              px: 1,
+              py: 0.25,
+              fontSize: 12,
+              borderRadius: 1,
+              bgcolor: formData.isPrivate ? colors.hover : 'success.main',
+              color: formData.isPrivate ? colors.textSecondary : '#fff',
+            }}
+          >
+            {formData.isPrivate ? 'Privé' : 'Public'}
+          </Box>
         </Typography>
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -213,12 +239,11 @@ export const WorkspaceSettings = () => {
             control={
               <Switch
                 checked={formData.isPrivate}
-                onChange={handleChange}
-                name="isPrivate"
+                onChange={handleTogglePrivacy} // MAJ locale seulement
                 color="primary"
               />
             }
-            label="Workspace privé"
+            label={`Workspace ${formData.isPrivate ? 'privé' : 'public'}`}
             sx={{ mb: 2, color: colors.text }}
           />
 
@@ -234,8 +259,6 @@ export const WorkspaceSettings = () => {
             label="Autoriser les membres à inviter"
             sx={{ mb: 2, color: colors.text }}
           />
-
-          {/* ⬇️ switch "Activer les notifications" supprimé */}
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
             <Button
