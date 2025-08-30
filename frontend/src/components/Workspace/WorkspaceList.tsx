@@ -24,7 +24,7 @@ import { fetchWorkspaces } from '../../store/slices/workspaceSlice';
 import { Workspace } from '../../types/workspace';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
-import { workspaceService } from '../../services/workspaceService'; // ⬅️ NEW
+import { workspaceService } from '../../services/workspaceService';
 
 export const WorkspaceList = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -37,14 +37,47 @@ export const WorkspaceList = () => {
     dispatch(fetchWorkspaces());
   }, [dispatch]);
 
-  // ⬇️ Applique les favoris persistés quand on reçoit la liste
+  // Applique les favoris persistés quand on reçoit la liste
   useEffect(() => {
     if (workspaces && Array.isArray(workspaces)) {
       setLocalWorkspaces(workspaceService.applyFavorites(workspaces));
     }
   }, [workspaces]);
 
-  // ⬇️ Toggle + persistance immédiate
+  // ⬇️ Charge les membres (avec avatars) pour chaque workspace affiché
+  useEffect(() => {
+    if (!workspaces || workspaces.length === 0) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const entries = await Promise.all(
+          workspaces.map(async (w) => {
+            const members = await workspaceService.getMembers(w.id);
+            return [w.id, members.slice(0, 4)] as const; // max 4 avatars
+          })
+        );
+
+        if (cancelled) return;
+
+        const byId: Record<string, ReturnType<typeof workspaceService.getMembers> extends Promise<infer U> ? U : any> =
+          Object.fromEntries(entries);
+
+        setLocalWorkspaces((prev) =>
+          prev.map((w) => (byId[w.id] ? { ...w, members: byId[w.id] } : w))
+        );
+      } catch {
+        // silencieux: si l'appel échoue, on n'interrompt pas l'affichage
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaces]);
+
+  // Toggle + persistance immédiate
   const handleToggleFavorite = (workspaceId: string) => {
     const next = workspaceService.toggleWorkspaceFavorite(workspaceId);
     setLocalWorkspaces((prev) =>
