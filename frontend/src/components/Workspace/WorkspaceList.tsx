@@ -26,6 +26,17 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
 import { workspaceService } from '../../services/workspaceService';
 
+const sortByFavorite = (items: Workspace[]) =>
+  [...items].sort((a, b) => {
+    // favoris d’abord
+    const favDiff = Number(b.isFavorite ?? false) - Number(a.isFavorite ?? false);
+    if (favDiff !== 0) return favDiff;
+    // optionnel: plus récents ensuite
+    const ta = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+    const tb = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+    return tb - ta;
+  });
+
 export const WorkspaceList = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { workspaces, loading, error } = useSelector((state: RootState) => state.workspace);
@@ -40,7 +51,9 @@ export const WorkspaceList = () => {
   // Applique les favoris persistés quand on reçoit la liste
   useEffect(() => {
     if (workspaces && Array.isArray(workspaces)) {
-      setLocalWorkspaces(workspaceService.applyFavorites(workspaces));
+      // applique le flag isFavorite (localStorage) puis trie
+      const withFavs = workspaceService.applyFavorites(workspaces);
+      setLocalWorkspaces(sortByFavorite(withFavs));
     }
   }, [workspaces]);
 
@@ -80,8 +93,10 @@ export const WorkspaceList = () => {
   // Toggle + persistance immédiate
   const handleToggleFavorite = (workspaceId: string) => {
     const next = workspaceService.toggleWorkspaceFavorite(workspaceId);
-    setLocalWorkspaces((prev) =>
-      prev.map((w) => (w.id === workspaceId ? { ...w, isFavorite: next } : w))
+    setLocalWorkspaces(prev =>
+      sortByFavorite(
+        prev.map(w => (w.id === workspaceId ? { ...w, isFavorite: next } : w))
+      )
     );
   };
 
