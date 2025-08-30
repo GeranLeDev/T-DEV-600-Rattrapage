@@ -4,25 +4,88 @@ import { Workspace, WorkspaceCreate, WorkspaceUpdate, Member } from '../types/wo
 let currentWorkspace: Workspace | null = null;
 let recentWorkspaces: Workspace[] = [];
 
+const FAVORITES_STORAGE_KEY = 'trellolike.favoriteWorkspaces';
+
+const getFavoriteIds = (): string[] => {
+  try {
+    const raw = localStorage.getItem(FAVORITES_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveFavoriteIds = (ids: string[]) => {
+  try {
+    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(ids));
+  } catch {}
+};
+
+const applyFavorites = <T extends { id: string; isFavorite?: boolean }>(items: T[]): T[] => {
+  const favs = new Set(getFavoriteIds());
+  return items.map((i) => ({ ...i, isFavorite: favs.has(i.id) }));
+};
+
+const withFavorite = <T extends { id: string; isFavorite?: boolean }>(item: T): T => {
+  const favs = getFavoriteIds();
+  return { ...item, isFavorite: favs.includes(item.id) };
+};
+
+
 export const workspaceService = {
-  // Gestion du workspace actuel
+  isWorkspaceFavorite: (workspaceId: string): boolean => {
+    return getFavoriteIds().includes(workspaceId);
+  },
+
+  setWorkspaceFavorite: (workspaceId: string, isFav: boolean): void => {
+    let ids = getFavoriteIds();
+    if (isFav) {
+      if (!ids.includes(workspaceId)) ids.unshift(workspaceId);
+    } else {
+      ids = ids.filter((id) => id !== workspaceId);
+    }
+    saveFavoriteIds(ids);
+
+    // met à jour le current et la liste récente en mémoire si présents
+    if (currentWorkspace && currentWorkspace.id === workspaceId) {
+      currentWorkspace = { ...currentWorkspace, isFavorite: isFav };
+    }
+    recentWorkspaces = recentWorkspaces.map((w) =>
+      w.id === workspaceId ? { ...w, isFavorite: isFav } : w
+    );
+  },
+
+  toggleWorkspaceFavorite: (workspaceId: string): boolean => {
+    const next = !getFavoriteIds().includes(workspaceId);
+    workspaceService.setWorkspaceFavorite(workspaceId, next);
+    return next;
+  },
+
+  applyFavorites: <T extends { id: string; isFavorite?: boolean }>(items: T[]): T[] => {
+    return applyFavorites(items);
+  },
+
   setCurrentWorkspace: (workspace: Workspace) => {
-    currentWorkspace = workspace;
+    const withFav = withFavorite(workspace);
+    currentWorkspace = withFav;
+
     // Ajouter aux récents si pas déjà présent
-    if (!recentWorkspaces.find((w) => w.id === workspace.id)) {
-      recentWorkspaces.unshift(workspace);
-      // Garder seulement les 3 derniers
+    if (!recentWorkspaces.find((w) => w.id === withFav.id)) {
+      recentWorkspaces.unshift(withFav);
       recentWorkspaces = recentWorkspaces.slice(0, 3);
+    } else {
+      // garder les favoris à jour si déjà présent
+      recentWorkspaces = recentWorkspaces.map((w) => (w.id === withFav.id ? withFav : w));
     }
   },
 
   getCurrentWorkspace: (): Workspace | null => {
-    return currentWorkspace;
+    return currentWorkspace ? withFavorite(currentWorkspace) : null;
   },
 
   getRecentWorkspaces: async (): Promise<Workspace[]> => {
     try {
-      // Récupérer les organisations récentes de l'utilisateur
       const response = await api.get('/members/me/organizations', {
         params: {
           fields: 'id,name,displayName,desc,memberships,prefs,dateLastActivity,createdAt',
@@ -32,17 +95,22 @@ export const workspaceService = {
         },
       });
 
-      // Transformer les données reçues au format attendu
-      return response.data.map((org: any) => ({
+      const mapped: Workspace[] = response.data.map((org: any) => ({
         id: org.id,
         name: org.name,
         displayName: org.displayName,
         description: org.desc || '',
         members: org.memberships || [],
-        isFavorite: org.prefs?.starred || false,
+        // On n'utilise PAS une étoile API ici (pas dispo pour organizations) : on applique nos favoris locaux
+        isFavorite: false,
         createdAt: org.createdAt,
         updatedAt: org.dateLastActivity,
       }));
+
+      const withFavs = applyFavorites(mapped);
+      // garde aussi une copie mémoire
+      recentWorkspaces = withFavs.slice(0, 3);
+      return withFavs;
     } catch (error) {
       console.error('Erreur lors de la récupération des workspaces récents:', error);
       throw error;
@@ -52,30 +120,35 @@ export const workspaceService = {
   // Récupérer tous les workspaces
   getAll: async (): Promise<Workspace[]> => {
     const response = await api.get('/members/me/organizations');
-    return response.data;
+    // on renvoie la liste + favoris appliqués
+    return applyFavorites(response.data);
   },
 
   // Récupérer un workspace par son ID
   getById: async (id: string): Promise<Workspace> => {
     const response = await api.get(`/organizations/${id}`);
-    return response.data;
+    return withFavorite(response.data);
   },
 
   // Créer un nouveau workspace
   create: async (data: WorkspaceCreate): Promise<Workspace> => {
     const response = await api.post('/organizations', data);
-    return response.data;
+    return withFavorite(response.data);
   },
 
   // Mettre à jour un workspace
   update: async (id: string, data: WorkspaceUpdate): Promise<Workspace> => {
     const response = await api.put(`/organizations/${id}`, data);
-    return response.data;
+    return withFavorite(response.data);
   },
 
   // Supprimer un workspace
   delete: async (id: string): Promise<void> => {
     await api.delete(`/organizations/${id}`);
+    // nettoyage local éventuel
+    if (currentWorkspace?.id === id) currentWorkspace = null;
+    recentWorkspaces = recentWorkspaces.filter((w) => w.id !== id);
+    workspaceService.setWorkspaceFavorite(id, false);
   },
 
   // Ajouter un membre au workspace
@@ -95,12 +168,12 @@ export const workspaceService = {
     const clean = username.trim().replace(/^@/, '');
 
     try {
-      // ✅ Variante Trello fiable : username dans le path, role en query
+      // username dans le path, role en query
       await api.put(
         `/organizations/${workspaceId}/members/${encodeURIComponent(clean)}?type=${role}`
       );
     } catch (err: any) {
-      // Fallback: ancien endpoint body (au cas où)
+      // fallback body
       try {
         await api.put(`/organizations/${workspaceId}/members`, {
           username: clean,
@@ -115,19 +188,15 @@ export const workspaceService = {
     }
   },
 
-
-
-  // Générer un lien d'invitation
+  // Générer un lien d'invitation (non supporté par l'API REST)
   generateInviteLink: async (_workspaceId: string): Promise<string> => {
     throw new Error('INVITE_LINK_NOT_SUPPORTED');
   },
 
-  // Valider et accepter une invitation par lien
-  // ⚠️ L'acceptation d'un lien 'trello.com/invite/...' se fait sur Trello (via cookie de session), pas via l'API REST.
+  // Accepter un lien d'invitation (non supporté - via UI Trello)
   acceptInviteLink: async (_workspaceId: string, _token: string): Promise<void> => {
     throw new Error('INVITE_LINK_NOT_SUPPORTED');
   },
-
 
   // Supprimer un membre du workspace
   removeMember: async (workspaceId: string, memberId: string): Promise<void> => {
@@ -136,9 +205,7 @@ export const workspaceService = {
 
   // Récupérer les membres d'un workspace avec leur rôle réel
   getMembers: async (workspaceId: string): Promise<Member[]> => {
-    const { data } = await api.get(
-      `/organizations/${workspaceId}/memberships?member=true`
-    );
+    const { data } = await api.get(`/organizations/${workspaceId}/memberships?member=true`);
     return (Array.isArray(data) ? data : []).map((ms: any) => ({
       id: ms.idMember,
       username: ms.member?.username ?? '',
@@ -148,8 +215,6 @@ export const workspaceService = {
       role: ms.memberType === 'admin' ? 'admin' : 'member',
     }));
   },
-
-
 
   // Mettre à jour le rôle d'un membre
   updateMemberRole: async (
