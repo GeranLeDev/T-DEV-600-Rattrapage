@@ -99,7 +99,7 @@ export const WorkspaceDetail = () => {
           displayName: response.data.displayName,
           description: response.data.desc || '',
           members: response.data.memberships || [],
-          isFavorite: response.data.prefs?.starred || false,
+          isFavorite: workspaceService.isWorkspaceFavorite(response.data.id),
           createdAt: response.data.createdAt,
           updatedAt: response.data.dateLastActivity,
         };
@@ -150,24 +150,12 @@ export const WorkspaceDetail = () => {
     setAnchorEl(null);
   };
 
-  const toggleFavorite = async () => {
+  const toggleFavorite = () => {
     if (!workspace) return;
-    try {
-      const response = await api.put(`/organizations/${workspace.id}/prefs/starred`, {
-        value: !workspace.isFavorite,
-      });
-
-      if (response.data.starred !== undefined) {
-        setWorkspace({
-          ...workspace,
-          isFavorite: response.data.starred,
-        });
-      }
-    } catch (err) {
-      console.error('Erreur lors de la mise à jour du favori:', err);
-    }
-    handleMenuClose();
+    const next = workspaceService.toggleWorkspaceFavorite(workspace.id);
+    setWorkspace({ ...workspace, isFavorite: next });
   };
+  
 
   const handleCreateBoard = async (title: string, background: string) => {
     if (!workspaceId) return;
