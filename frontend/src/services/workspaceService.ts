@@ -113,19 +113,25 @@ export const workspaceService = {
   },
 
   // Récupérer les membres d'un workspace par son ID
-  getMembers: async (workspaceId: string): Promise<any[]> => {
+  getMembers: async (workspaceId: string): Promise<Member[]> => {
     try {
-      const response = await api.get(`/organizations/${workspaceId}/members`);
-      return response.data.map((member: any) => ({
-        id: member.id,
-        name: member.fullName || member.username,
-        avatar: member.avatarUrl || '',
+      const { data } = await api.get(
+        `/organizations/${workspaceId}/members?fields=id,username,fullName,avatarUrl`
+      );
+  
+      return (Array.isArray(data) ? data : []).map((m: any) => ({
+        id: m.id,
+        username: m.username ?? '',
+        fullName: m.fullName ?? '',
+        avatar: m.avatarUrl ?? '',
+        role: 'member', // valeur par défaut (voir variante "roles" ci-dessous)
       }));
     } catch (error) {
       console.error('Erreur lors de la récupération des membres:', error);
       return [];
     }
   },
+  
 
   // Mettre à jour le rôle d'un membre
   updateMemberRole: async (
