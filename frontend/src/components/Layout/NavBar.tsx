@@ -85,6 +85,17 @@ const Navbar: React.FC = () => {
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
   const [recentWorkspaces, setRecentWorkspaces] = useState<Workspace[]>([]);
   const [loadingRecents, setLoadingRecents] = useState(false);
+  const [search, setSearch] = useState('');
+
+  // Synchroniser l'input avec l'URL quand on est sur /workspaces
+  useEffect(() => {
+    if (location.pathname.startsWith('/workspaces')) {
+      const params = new URLSearchParams(location.search);
+      setSearch(params.get('q') || '');
+    } else {
+      setSearch('');
+    }
+  }, [location.pathname, location.search]);
 
   // Init : charge le workspace courant + les 3 derniers visités (stockage local)
   useEffect(() => {
@@ -145,6 +156,22 @@ const Navbar: React.FC = () => {
       .getRecentVisitedWorkspaces()
       .then(setRecentWorkspaces)
       .finally(() => setLoadingRecents(false));
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearch(value);
+
+    // N’agir QUE sur /workspaces
+    if (location.pathname.startsWith('/workspaces')) {
+      const params = new URLSearchParams(location.search);
+      if (value) params.set('q', value);
+      else params.delete('q');
+      navigate(
+        { pathname: '/workspaces', search: params.toString() ? `?${params.toString()}` : '' },
+        { replace: true }
+      );
+    }
   };
 
   const goToWorkspace = (w: Workspace) => {
@@ -270,6 +297,8 @@ const Navbar: React.FC = () => {
           <TextField
             placeholder="Search..."
             size="small"
+            value={search}
+            onChange={handleSearchChange}
             sx={{
               width: '300px',
               '& .MuiOutlinedInput-root': {
@@ -280,6 +309,7 @@ const Navbar: React.FC = () => {
               },
             }}
           />
+
         </Box>
 
         <Box sx={{ display: 'flex', gap: 1 }}>

@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -25,6 +24,8 @@ import { Workspace } from '../../types/workspace';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
 import { workspaceService } from '../../services/workspaceService';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 const sortByFavorite = (items: Workspace[]) =>
   [...items].sort((a, b) => {
@@ -43,6 +44,15 @@ export const WorkspaceList = () => {
   const navigate = useNavigate();
   const { colors, shadows } = useTheme();
   const [localWorkspaces, setLocalWorkspaces] = useState<Workspace[]>([]);
+  const [searchParams] = useSearchParams();
+  const q = (searchParams.get('q') || '').toLowerCase().trim();
+
+  const listToShow = useMemo(() => {
+    if (!q) return localWorkspaces;
+    return localWorkspaces.filter(w =>
+      (w.displayName || w.name || '').toLowerCase().includes(q)
+    );
+  }, [localWorkspaces, q]);
 
   useEffect(() => {
     dispatch(fetchWorkspaces());
@@ -143,72 +153,91 @@ export const WorkspaceList = () => {
       </Box>
 
       <Grid container spacing={3}>
-        {localWorkspaces.map((workspace) => (
-          <Grid item xs={12} sm={6} md={4} key={workspace.id}>
-            <Card
-              elevation={0}
+        {listToShow.length === 0 ? (
+          <Grid item xs={12}>
+            <Box
               sx={{
+                p: 2,
+                border: `1px dashed ${colors.border}`,
                 bgcolor: colors.card,
-                boxShadow: shadows.card,
-                border: `1px solid ${colors.border}`,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                transition: 'transform 0.2s ease-in-out',
-                '&:hover': { transform: 'translateY(-4px)' },
+                color: colors.textSecondary,
+                textAlign: 'center',
+                borderRadius: 1,
               }}
             >
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                  <Typography
-                    variant="h6"
-                    sx={{ cursor: 'pointer', '&:hover': { color: colors.primary } }}
-                    onClick={() => navigate(`/workspace/${workspace.id}`)}
-                  >
-                    {workspace.displayName || workspace.name}
+              {q
+                ? <>Aucun workspace ne correspond à « {q} »</>
+                : <>Aucun workspace à afficher</>}
+            </Box>
+          </Grid>
+        ) : (
+          listToShow.map((workspace) => (
+            <Grid item xs={12} sm={6} md={4} key={workspace.id}>
+              <Card
+                elevation={0}
+                sx={{
+                  bgcolor: colors.card,
+                  boxShadow: shadows.card,
+                  border: `1px solid ${colors.border}`,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  transition: 'transform 0.2s ease-in-out',
+                  '&:hover': { transform: 'translateY(-4px)' },
+                }}
+              >
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography
+                      variant="h6"
+                      sx={{ cursor: 'pointer', '&:hover': { color: colors.primary } }}
+                      onClick={() => navigate(`/workspace/${workspace.id}`)}
+                    >
+                      {workspace.displayName || workspace.name}
+                    </Typography>
+
+                    <IconButton
+                      onClick={() => handleToggleFavorite(workspace.id)}
+                      sx={{ color: workspace.isFavorite ? colors.primary : colors.textSecondary }}
+                      aria-label={workspace.isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    >
+                      <StarIcon />
+                    </IconButton>
+                  </Box>
+
+                  <Typography variant="body2" sx={{ mb: 2, color: colors.textSecondary }}>
+                    {workspace.description}
                   </Typography>
 
+                  {workspace.members && (
+                    <AvatarGroup max={4} sx={{ justifyContent: 'flex-start' }}>
+                      {workspace.members.map((member) => (
+                        <Tooltip key={member.id} title={member.username}>
+                          <Avatar src={member.avatar} alt={member.username} />
+                        </Tooltip>
+                      ))}
+                    </AvatarGroup>
+                  )}
+                </CardContent>
+
+                <CardActions sx={{ justifyContent: 'flex-end', p: 2 }}>
                   <IconButton
-                    onClick={() => handleToggleFavorite(workspace.id)}
-                    sx={{ color: workspace.isFavorite ? colors.primary : colors.textSecondary }}
-                    aria-label={workspace.isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    onClick={() => navigate(`/workspaces/${workspace.id}/members`)}
+                    sx={{ color: colors.text }}
                   >
-                    <StarIcon />
+                    <GroupIcon />
                   </IconButton>
-                </Box>
-
-                <Typography variant="body2" sx={{ mb: 2, color: colors.textSecondary }}>
-                  {workspace.description}
-                </Typography>
-
-                {workspace.members && (
-                  <AvatarGroup max={4} sx={{ justifyContent: 'flex-start' }}>
-                    {workspace.members.map((member) => (
-                      <Tooltip key={member.id} title={member.username}>
-                        <Avatar src={member.avatar} alt={member.username} />
-                      </Tooltip>
-                    ))}
-                  </AvatarGroup>
-                )}
-              </CardContent>
-
-              <CardActions sx={{ justifyContent: 'flex-end', p: 2 }}>
-                <IconButton
-                  onClick={() => navigate(`/workspaces/${workspace.id}/members`)}
-                  sx={{ color: colors.text }}
-                >
-                  <GroupIcon />
-                </IconButton>
-                <IconButton
-                  onClick={() => navigate(`/workspaces/${workspace.id}/settings`)}
-                  sx={{ color: colors.text }}
-                >
-                  <SettingsIcon />
-                </IconButton>
-              </CardActions>
-            </Card>
-          </Grid>
-        ))}
+                  <IconButton
+                    onClick={() => navigate(`/workspaces/${workspace.id}/settings`)}
+                    sx={{ color: colors.text }}
+                  >
+                    <SettingsIcon />
+                  </IconButton>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))
+        )}
       </Grid>
     </Box>
   );
