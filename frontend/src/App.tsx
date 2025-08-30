@@ -13,6 +13,7 @@ import { WorkspaceMembers } from './components/Workspace/WorkspaceMembers';
 import { WorkspaceSettings } from './components/Workspace/WorkspaceSettings';
 import { JoinWorkspace } from './pages/Workspace/JoinWorkspace';
 import BoardPage from './pages/Board/BoardPage';
+import AccountPage from './components/Account/AccountPage';
 
 function App() {
   return (
@@ -74,6 +75,14 @@ function App() {
               element={
                 <Layout>
                   <BoardPage />
+                </Layout>
+              }
+            />
+            <Route
+              path="/compte"
+              element={
+                <Layout>
+                  <AccountPage />
                 </Layout>
               }
             />
