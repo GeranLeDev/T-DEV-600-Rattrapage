@@ -87,15 +87,12 @@ const Navbar: React.FC = () => {
   const [loadingRecents, setLoadingRecents] = useState(false);
   const [search, setSearch] = useState('');
 
-  // Synchroniser l'input avec l'URL quand on est sur /workspaces
+  // Synchroniser l'input avec l'URL quand on est sur /workspaces et /workspace: id (en gros les board)
   useEffect(() => {
-    if (location.pathname.startsWith('/workspaces')) {
-      const params = new URLSearchParams(location.search);
-      setSearch(params.get('q') || '');
-    } else {
-      setSearch('');
-    }
-  }, [location.pathname, location.search]);
+    const q = new URLSearchParams(location.search).get('q') || '';
+    setSearch(q);
+  }, [location.search]);
+
 
   // Init : charge le workspace courant + les 3 derniers visités (stockage local)
   useEffect(() => {
@@ -148,7 +145,6 @@ const Navbar: React.FC = () => {
     };
   }, []);
 
-
   const handleRecentClick = (event: React.MouseEvent<HTMLElement>) => {
     setRecentAnchorEl(event.currentTarget);
     setLoadingRecents(true);
@@ -162,13 +158,24 @@ const Navbar: React.FC = () => {
     const value = e.target.value;
     setSearch(value);
 
-    // N’agir QUE sur /workspaces
+    const params = new URLSearchParams(location.search);
+    if (value) params.set('q', value);
+    else params.delete('q');
+
+    // /workspaces -> filtrer les workspaces
     if (location.pathname.startsWith('/workspaces')) {
-      const params = new URLSearchParams(location.search);
-      if (value) params.set('q', value);
-      else params.delete('q');
       navigate(
         { pathname: '/workspaces', search: params.toString() ? `?${params.toString()}` : '' },
+        { replace: true }
+      );
+      return;
+    }
+
+    // /workspace/:id -> filtrer les boards du workspace courant
+    const m = location.pathname.match(/^\/workspace\/([^/]+)/);
+    if (m) {
+      navigate(
+        { pathname: `/workspace/${m[1]}`, search: params.toString() ? `?${params.toString()}` : '' },
         { replace: true }
       );
     }
@@ -295,7 +302,13 @@ const Navbar: React.FC = () => {
 
         <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', mx: 4 }}>
           <TextField
-            placeholder="Search..."
+            placeholder={
+              location.pathname.startsWith('/workspaces')
+                ? 'Rechercher des workspaces...'
+                : /^\/workspace\//.test(location.pathname)
+                  ? 'Rechercher des boards...'
+                  : 'Search...'
+            }
             size="small"
             value={search}
             onChange={handleSearchChange}
@@ -309,6 +322,7 @@ const Navbar: React.FC = () => {
               },
             }}
           />
+
 
         </Box>
 

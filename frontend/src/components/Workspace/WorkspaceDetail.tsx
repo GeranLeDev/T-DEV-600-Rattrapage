@@ -1,3 +1,5 @@
+import { useSearchParams } from 'react-router-dom';
+import { useMemo } from 'react';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -76,6 +78,8 @@ export const WorkspaceDetail = () => {
   const [openCreateBoard, setOpenCreateBoard] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [boardToDelete, setBoardToDelete] = useState<Board | null>(null);
+  const [searchParams] = useSearchParams();
+  const q = (searchParams.get('q') || '').toLowerCase().trim();
 
   useEffect(() => {
     const fetchWorkspaceData = async () => {
@@ -103,7 +107,7 @@ export const WorkspaceDetail = () => {
           createdAt: response.data.createdAt,
           updatedAt: response.data.dateLastActivity,
         };
-        
+
         workspaceService.setCurrentWorkspace(workspaceData);
         const membersResponse = await api.get(`/organizations/${workspaceId}/members`);
         const membersData: Member[] = membersResponse.data.map((member: any) => ({
@@ -156,7 +160,14 @@ export const WorkspaceDetail = () => {
     const next = workspaceService.toggleWorkspaceFavorite(workspace.id);
     setWorkspace({ ...workspace, isFavorite: next });
   };
-  
+
+  const boardsToShow = useMemo(() => {
+    if (!q) return boards;
+    return boards.filter(b =>
+      (b.name || '').toLowerCase().includes(q) ||
+      (b.description || '').toLowerCase().includes(q)
+    );
+  }, [boards, q]);
 
   const handleCreateBoard = async (title: string, background: string) => {
     if (!workspaceId) return;
@@ -351,7 +362,7 @@ export const WorkspaceDetail = () => {
 
       <TabPanel value={tabValue} index={0}>
         <Grid container spacing={spacing.md}>
-          {boards.map((board) => (
+          {(boardsToShow || boards).map((board) => (
             <Grid item xs={12} sm={6} md={4} key={board.id}>
               <Card
                 sx={{
